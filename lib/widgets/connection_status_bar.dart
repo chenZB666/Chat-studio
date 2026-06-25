@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/server_provider.dart';
+import '../core/theme/design_tokens.dart';
 
 class ConnectionStatusBar extends ConsumerWidget {
   const ConnectionStatusBar({super.key});
@@ -10,58 +11,93 @@ class ConnectionStatusBar extends ConsumerWidget {
     final serverState = ref.watch(serverProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
-    IconData icon;
-    Color color;
-    String text;
-
+    Widget statusWidget;
     switch (serverState.connectionState) {
       case ServerConnectionState.connected:
-        icon = Icons.check_circle;
-        color = Colors.green;
-        text = 'llama connected  •  ${serverState.latency?.inMilliseconds ?? "?"}ms';
+        statusWidget = _StatusRow(
+          dotColor: Colors.green.shade400,
+          text: '${serverState.latency?.inMilliseconds ?? "?"}ms',
+          subtext: serverState.currentUrl,
+          colorScheme: colorScheme,
+        );
         break;
       case ServerConnectionState.connecting:
-        icon = Icons.sync;
-        color = Colors.orange;
-        text = 'Connecting...';
+        statusWidget = _StatusRow(
+          dotColor: Colors.orange.shade400,
+          text: 'Connecting...',
+          colorScheme: colorScheme,
+          isAnimated: true,
+        );
         break;
       case ServerConnectionState.error:
-        icon = Icons.error;
-        color = Colors.red;
-        text = 'Connection error: ${serverState.errorMessage ?? "unknown"}';
+        statusWidget = _StatusRow(
+          dotColor: colorScheme.error,
+          text: serverState.errorMessage ?? 'Connection error',
+          colorScheme: colorScheme,
+        );
         break;
       case ServerConnectionState.disconnected:
-        icon = Icons.link_off;
-        color = colorScheme.onSurfaceVariant;
-        text = 'No server configured';
+        statusWidget = _StatusRow(
+          dotColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+          text: 'No server configured',
+          colorScheme: colorScheme,
+        );
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.xs),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
+        color: colorScheme.surface,
+        border: Border(top: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3))),
       ),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
-              overflow: TextOverflow.ellipsis,
-            ),
+      child: statusWidget,
+    );
+  }
+}
+
+class _StatusRow extends StatelessWidget {
+  final Color dotColor;
+  final String text;
+  final String? subtext;
+  final ColorScheme colorScheme;
+  final bool isAnimated;
+
+  const _StatusRow({
+    required this.dotColor,
+    required this.text,
+    this.subtext,
+    required this.colorScheme,
+    this.isAnimated = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: dotColor,
+            shape: BoxShape.circle,
           ),
-          if (serverState.currentUrl != null)
-            Text(
-              serverState.currentUrl!,
-              style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
-              overflow: TextOverflow.ellipsis,
-            ),
-        ],
-      ),
+        ),
+        const SizedBox(width: Spacing.xs),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (subtext != null)
+          Text(
+            subtext!,
+            style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+            overflow: TextOverflow.ellipsis,
+          ),
+      ],
     );
   }
 }

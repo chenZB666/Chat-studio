@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../providers/chat_provider.dart';
 import '../providers/document_provider.dart';
 import '../providers/server_provider.dart';
+import '../core/theme/design_tokens.dart';
 import 'parameter_panel.dart';
 
 class ChatInput extends ConsumerStatefulWidget {
@@ -43,9 +44,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
@@ -63,25 +61,16 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 40, height: 4,
-                    decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+                  const SizedBox(height: Spacing.sm),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.md, Spacing.md, Spacing.sm),
                     child: TextField(
                       controller: searchController,
                       autofocus: true,
                       decoration: InputDecoration(
                         hintText: 'Search models...',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: Icon(Icons.search, size: LayoutTokens.iconSize),
                         isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
                       onChanged: (v) => setSheetState(() => filter = v),
                     ),
@@ -91,9 +80,15 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                       maxHeight: MediaQuery.of(context).size.height * 0.4,
                     ),
                     child: filtered.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Text('No models match your search'),
+                        ? Padding(
+                            padding: const EdgeInsets.all(Spacing.lg),
+                            child: Column(
+                              children: [
+                                Icon(Icons.search_off, size: 32, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                                const SizedBox(height: Spacing.sm),
+                                Text('No models match your search', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                              ],
+                            ),
                           )
                         : ListView.builder(
                             shrinkWrap: true,
@@ -103,8 +98,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               final isSelected = model.id == serverState.selectedModelId;
                               return ListTile(
                                 selected: isSelected,
+                                selectedTileColor: colorScheme.primary.withValues(alpha: 0.08),
                                 leading: Icon(
-                                  Icons.smart_toy,
+                                  Icons.smart_toy_outlined,
+                                  size: LayoutTokens.iconSize,
                                   color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
                                 ),
                                 title: Text(model.name, style: const TextStyle(fontSize: 14)),
@@ -112,7 +109,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                                     ? Text('Context: ${model.contextLength} tokens', style: const TextStyle(fontSize: 11))
                                     : null,
                                 trailing: isSelected
-                                    ? Icon(Icons.check, color: colorScheme.primary, size: 20)
+                                    ? Icon(Icons.check_circle, color: colorScheme.primary, size: 18)
                                     : null,
                                 onTap: () {
                                   ref.read(serverProvider.notifier).selectModel(model.id);
@@ -122,7 +119,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             },
                           ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: Spacing.sm),
                 ],
               ),
             );
@@ -143,114 +140,160 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
+        border: Border(top: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3))),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Attachment chips
           if (docState.attachments.isNotEmpty)
             SizedBox(
-              height: 40,
+              height: 36,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: Spacing.sm, vertical: 4),
                 itemCount: docState.attachments.length,
                 itemBuilder: (context, index) {
                   final att = docState.attachments[index];
-                  return Chip(
-                    label: Text(att.fileName, style: const TextStyle(fontSize: 11)),
-                    deleteIcon: const Icon(Icons.close, size: 16),
-                    onDeleted: () => ref.read(documentProvider.notifier).removeAttachment(index),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Chip(
+                      label: Text(att.fileName, style: const TextStyle(fontSize: 11)),
+                      deleteIcon: const Icon(Icons.close, size: 14),
+                      onDeleted: () => ref.read(documentProvider.notifier).removeAttachment(index),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
                   );
                 },
               ),
             ),
+
+          // Input row
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                PopupMenuButton<String>(
-                  icon: Icon(Icons.attach_file, color: colorScheme.onSurfaceVariant),
-                  onSelected: (value) async {
-                    if (value == 'file') {
-                      final result = await FilePicker.platform.pickFiles(
-                        type: FileType.custom,
-                        allowedExtensions: ['txt', 'md', 'pdf'],
-                      );
-                      if (result != null && result.files.single.path != null) {
-                        ref.read(documentProvider.notifier).addFile(result.files.single.path!);
+            padding: const EdgeInsets.fromLTRB(Spacing.sm, Spacing.xxs, Spacing.sm, Spacing.sm),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(RadiusTokens.lg),
+                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Attach file button
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.attach_file_rounded, size: LayoutTokens.iconSize, color: colorScheme.onSurfaceVariant),
+                    onSelected: (value) async {
+                      if (value == 'file') {
+                        final result = await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['txt', 'md', 'pdf'],
+                        );
+                        if (result != null && result.files.single.path != null) {
+                          ref.read(documentProvider.notifier).addFile(result.files.single.path!);
+                        }
+                      } else if (value == 'image') {
+                        final result = await FilePicker.platform.pickFiles(type: FileType.image);
+                        if (result != null && result.files.single.path != null) {
+                          ref.read(documentProvider.notifier).addFile(result.files.single.path!);
+                        }
                       }
-                    } else if (value == 'image') {
-                      final result = await FilePicker.platform.pickFiles(
-                        type: FileType.image,
-                      );
-                      if (result != null && result.files.single.path != null) {
-                        ref.read(documentProvider.notifier).addFile(result.files.single.path!);
-                      }
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'file', child: ListTile(leading: Icon(Icons.description), title: Text('File'), dense: true)),
-                    const PopupMenuItem(value: 'image', child: ListTile(leading: Icon(Icons.image), title: Text('Image'), dense: true)),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: colorScheme.outlineVariant),
-                    borderRadius: BorderRadius.circular(16),
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'file', child: ListTile(leading: Icon(Icons.description_outlined), title: Text('File'), dense: true)),
+                      const PopupMenuItem(value: 'image', child: ListTile(leading: Icon(Icons.image_outlined), title: Text('Image'), dense: true)),
+                    ],
                   ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => _showModelSelector(context, serverState, colorScheme),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+
+                  // Model selector
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: Spacing.sm, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(RadiusTokens.full),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(RadiusTokens.full),
+                      onTap: () => _showModelSelector(context, serverState, colorScheme),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          Icon(Icons.smart_toy_outlined, size: 14, color: colorScheme.primary),
+                          const SizedBox(width: 4),
                           Text(
                             serverState.selectedModelId?.split('/').last ?? 'Model',
                             style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
                           ),
-                          Icon(Icons.arrow_drop_down, size: 18, color: colorScheme.onSurfaceVariant),
+                          Icon(Icons.arrow_drop_down, size: 16, color: colorScheme.onSurfaceVariant),
                         ],
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    maxLines: 5,
-                    minLines: 1,
-                    textInputAction: TextInputAction.newline,
-                    onChanged: (v) => setState(() => _hasText = v.isNotEmpty),
-                    decoration: const InputDecoration(
-                      hintText: 'Type a message...',
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      isDense: true,
+
+                  // Text input
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      maxLines: 5,
+                      minLines: 1,
+                      textInputAction: TextInputAction.newline,
+                      onChanged: (v) => setState(() => _hasText = v.isNotEmpty),
+                      style: TextStyle(fontSize: 14, color: colorScheme.onSurface),
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.sm, vertical: 10),
+                        isDense: true,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                isStreaming
-                    ? IconButton.filled(
-                        onPressed: () => ref.read(chatProvider.notifier).stopStream(),
-                        icon: const Icon(Icons.stop),
-                        style: IconButton.styleFrom(backgroundColor: Colors.red),
-                      )
-                    : IconButton.filled(
-                        onPressed: _hasText ? _sendMessage : null,
-                        icon: const Icon(Icons.send),
-                      ),
-              ],
+
+                  // Send/Stop button
+                  Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: isStreaming
+                        ? Material(
+                            color: colorScheme.error.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(RadiusTokens.md),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(RadiusTokens.md),
+                              onTap: () => ref.read(chatProvider.notifier).stopStream(),
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                alignment: Alignment.center,
+                                child: const Icon(Icons.stop, size: 18, color: Colors.white),
+                              ),
+                            ),
+                          )
+                        : Material(
+                            color: _hasText ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(RadiusTokens.md),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(RadiusTokens.md),
+                              onTap: _hasText ? _sendMessage : null,
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  Icons.arrow_upward_rounded,
+                                  size: 20,
+                                  color: _hasText ? colorScheme.onPrimary : colorScheme.onSurface.withValues(alpha: 0.38),
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
+
+          // Parameter panel
           const ParameterPanel(),
         ],
       ),

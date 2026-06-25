@@ -6,6 +6,7 @@ import 'package:flutter_highlight/themes/github.dart';
 import 'package:flutter_highlight/themes/dracula.dart';
 import 'package:markdown/markdown.dart' as md;
 import '../database/database.dart';
+import '../core/theme/design_tokens.dart';
 
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
@@ -27,17 +28,24 @@ class MessageBubble extends StatelessWidget {
     final timeStr = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.xs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser)
             Padding(
-              padding: const EdgeInsets.only(right: 8, top: 4),
+              padding: const EdgeInsets.only(right: Spacing.sm, top: 6),
               child: CircleAvatar(
                 radius: 14,
-                backgroundColor: colorScheme.primaryContainer,
-                child: Text('AI', style: TextStyle(fontSize: 10, color: colorScheme.onPrimaryContainer)),
+                backgroundColor: colorScheme.primary.withValues(alpha: 0.12),
+                child: Text(
+                  'AI',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
+                  ),
+                ),
               ),
             ),
           Expanded(
@@ -45,12 +53,12 @@ class MessageBubble extends StatelessWidget {
               crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(Spacing.md),
                   decoration: BoxDecoration(
                     color: isUser
-                        ? colorScheme.primaryContainer
-                        : colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12).copyWith(
+                        ? colorScheme.primary.withValues(alpha: 0.10)
+                        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(RadiusTokens.md).copyWith(
                       bottomRight: isUser ? Radius.zero : null,
                       bottomLeft: !isUser ? Radius.zero : null,
                     ),
@@ -58,28 +66,47 @@ class MessageBubble extends StatelessWidget {
                   child: isUser
                       ? SelectableText(
                           message.content,
-                          style: TextStyle(color: colorScheme.onPrimaryContainer),
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.5,
+                            color: colorScheme.onSurface,
+                          ),
                         )
-                      : _buildMarkdownContent(message.content),
+                      : _buildMarkdownContent(message.content, colorScheme, isDark),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: Spacing.xxs),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(timeStr, style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
+                    Text(
+                      timeStr,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      ),
+                    ),
                     if (isStreaming)
-                      Text(' ● streaming', style: TextStyle(fontSize: 10, color: Colors.green)),
+                      const SizedBox(
+                        width: 10,
+                        height: 10,
+                        child: Padding(
+                          padding: EdgeInsets.only(left: 4),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
                     if (!isUser && !isStreaming)
                       IconButton(
-                        icon: Icon(Icons.copy, size: 14, color: colorScheme.onSurfaceVariant),
+                        icon: Icon(Icons.content_copy, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: message.content));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: const Text('Copied'), duration: const Duration(seconds: 1)),
+                            const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1)),
                           );
                         },
                         constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                         padding: EdgeInsets.zero,
+                        splashRadius: 14,
+                        tooltip: 'Copy',
                       ),
                   ],
                 ),
@@ -88,11 +115,11 @@ class MessageBubble extends StatelessWidget {
           ),
           if (isUser)
             Padding(
-              padding: const EdgeInsets.only(left: 8, top: 4),
+              padding: const EdgeInsets.only(left: Spacing.sm, top: 6),
               child: CircleAvatar(
                 radius: 14,
-                backgroundColor: colorScheme.secondaryContainer,
-                child: Icon(Icons.person, size: 16, color: colorScheme.onSecondaryContainer),
+                backgroundColor: colorScheme.secondary.withValues(alpha: 0.12),
+                child: Icon(Icons.person_outline, size: 16, color: colorScheme.secondary),
               ),
             ),
         ],
@@ -100,32 +127,33 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildMarkdownContent(String content) {
-    if (isStreaming && content.isEmpty) {
-      return const SizedBox(
-        height: 20,
-        width: 40,
-        child: LinearProgressIndicator(),
-      );
-    }
-
+  Widget _buildMarkdownContent(String content, ColorScheme colorScheme, bool isDark) {
     return MarkdownBody(
       data: content,
       selectable: true,
       styleSheet: MarkdownStyleSheet(
-        p: const TextStyle(fontSize: 14),
+        p: TextStyle(fontSize: 14, height: 1.6, color: colorScheme.onSurface),
+        a: TextStyle(color: colorScheme.primary),
+        strong: TextStyle(fontWeight: FontWeight.w600),
         code: TextStyle(
-          backgroundColor: (isDark ? Colors.white : Colors.black).withOpacity(0.08),
+          backgroundColor: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
           fontSize: 13,
           fontFamily: 'monospace',
+          color: isDark ? Colors.amber.shade300 : Colors.indigo.shade700,
         ),
         codeblockDecoration: BoxDecoration(
-          color: (isDark ? Colors.white : Colors.black).withOpacity(0.08),
-          borderRadius: BorderRadius.circular(8),
+          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(RadiusTokens.sm),
         ),
-        h1: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        h2: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        h3: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        codeblockPadding: const EdgeInsets.all(Spacing.xs),
+        h1: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, height: 1.4),
+        h2: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.4),
+        h3: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.4),
+        blockquoteDecoration: BoxDecoration(
+          border: Border(left: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 3)),
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        ),
+        blockquotePadding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
       ),
       builders: {
         'code': _CodeBlockBuilder(isDark: isDark),
@@ -144,34 +172,48 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
     final lang = elem.attributes['class']?.replaceAll('language-', '') ?? '';
     final theme = isDark ? draculaTheme : githubTheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.12),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: Spacing.sm, vertical: 6),
+            decoration: BoxDecoration(
+              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.10),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(RadiusTokens.sm)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  lang.isNotEmpty ? lang : 'code',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: code));
+                  },
+                  child: Icon(Icons.content_copy, size: 14, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                ),
+              ],
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(lang.isNotEmpty ? lang : 'code',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-              const Icon(Icons.copy, size: 14),
-            ],
+          ClipRect(
+            child: HighlightView(
+              code,
+              language: lang.isNotEmpty ? lang : 'plaintext',
+              theme: theme,
+              padding: const EdgeInsets.all(Spacing.md),
+              textStyle: const TextStyle(fontSize: 13, fontFamily: 'monospace', height: 1.4),
+            ),
           ),
-        ),
-        ClipRect(
-          child: HighlightView(
-            code,
-            language: lang.isNotEmpty ? lang : 'plaintext',
-            theme: theme,
-            padding: const EdgeInsets.all(12),
-            textStyle: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

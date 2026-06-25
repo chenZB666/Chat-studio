@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import '../core/theme/design_tokens.dart';
 
 class TitleBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
@@ -15,46 +16,43 @@ class TitleBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(40);
+  Size get preferredSize => const Size.fromHeight(LayoutTokens.titleBarHeight);
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      height: 40,
+      height: LayoutTokens.titleBarHeight,
       decoration: BoxDecoration(
-        color: isDark
-            ? colorScheme.surfaceContainerLow
-            : Colors.white,
+        color: colorScheme.surface,
         border: Border(
-          bottom: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          bottom: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
         ),
       ),
       child: Row(
         children: [
-          // Window drag area + app icon + title
           if (Platform.isWindows)
             Expanded(
               child: DragToMoveArea(
                 child: SizedBox(
-                  height: 40,
+                  height: LayoutTokens.titleBarHeight,
                   child: Row(
                     children: [
-                      const SizedBox(width: 12),
-                      Icon(Icons.auto_awesome, size: 18, color: const Color(0xFF7C4DFF)),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: Spacing.md),
+                      _AppLogo(colorScheme: colorScheme),
+                      const SizedBox(width: Spacing.sm),
                       Text(
                         'Chat Studio',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: colorScheme.onSurface,
+                          letterSpacing: -0.2,
                         ),
                       ),
                       if (leading != null) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: Spacing.sm),
                         leading!,
                       ],
                     ],
@@ -66,31 +64,28 @@ class TitleBar extends StatelessWidget implements PreferredSizeWidget {
             Expanded(
               child: Row(
                 children: [
-                  const SizedBox(width: 12),
-                  Icon(Icons.auto_awesome, size: 18, color: const Color(0xFF7C4DFF)),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Chat Studio',
+                  const SizedBox(width: Spacing.md),
+                  _AppLogo(colorScheme: colorScheme),
+                  const SizedBox(width: Spacing.sm),
+                  Text('Chat Studio',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: colorScheme.onSurface,
+                      letterSpacing: -0.2,
                     ),
                   ),
                   if (leading != null) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: Spacing.sm),
                     leading!,
                   ],
                 ],
               ),
             ),
 
-          // Action buttons (search, settings)
           if (actions != null) ...actions!,
+          const SizedBox(width: Spacing.xxs),
 
-          const SizedBox(width: 4),
-
-          // Window control buttons
           if (Platform.isWindows) ...[
             _WindowButton(
               icon: Icons.horizontal_rule_rounded,
@@ -114,6 +109,28 @@ class TitleBar extends StatelessWidget implements PreferredSizeWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _AppLogo extends StatelessWidget {
+  final ColorScheme colorScheme;
+  const _AppLogo({required this.colorScheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(RadiusTokens.xxs),
+        gradient: LinearGradient(
+          colors: [colorScheme.primary, colorScheme.tertiary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(child: Icon(Icons.auto_awesome, size: 14, color: Colors.white)),
     );
   }
 }
@@ -145,11 +162,12 @@ class _WindowButtonState extends State<_WindowButton> {
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
           width: 46,
-          height: 40,
+          height: LayoutTokens.titleBarHeight,
           color: widget.isClose && _hovered
-              ? Colors.red
+              ? colorScheme.error.withValues(alpha: 0.8)
               : _hovered
                   ? colorScheme.surfaceContainerHighest
                   : Colors.transparent,
@@ -158,7 +176,7 @@ class _WindowButtonState extends State<_WindowButton> {
             size: 16,
             color: widget.isClose && _hovered
                 ? Colors.white
-                : colorScheme.onSurface,
+                : colorScheme.onSurfaceVariant,
           ),
         ),
       ),

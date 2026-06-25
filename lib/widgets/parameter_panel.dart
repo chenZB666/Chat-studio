@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/conversation_list_provider.dart';
 import '../providers/providers.dart';
+import '../core/theme/design_tokens.dart';
 
 class ParameterPanel extends ConsumerStatefulWidget {
   const ParameterPanel({super.key});
@@ -13,8 +14,6 @@ class ParameterPanel extends ConsumerStatefulWidget {
 
 class _ParameterPanelState extends ConsumerState<ParameterPanel> {
   bool _expanded = false;
-
-  // Debounce timers for each parameter to avoid excessive DB writes
   Timer? _debounceTimer;
 
   void _debouncedUpdate({
@@ -25,7 +24,7 @@ class _ParameterPanelState extends ConsumerState<ParameterPanel> {
     double? repeatPenalty,
   }) {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 150), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 200), () {
       final convId = ref.read(conversationListProvider).activeConversationId;
       if (convId != null) {
         ref.read(storageServiceProvider).updateConversationParameters(
@@ -72,63 +71,140 @@ class _ParameterPanelState extends ConsumerState<ParameterPanel> {
         InkWell(
           onTap: () => setState(() => _expanded = !_expanded),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.xxs),
             child: Row(
               children: [
-                Icon(_expanded ? Icons.expand_less : Icons.expand_more, size: 16, color: colorScheme.onSurfaceVariant),
-                const SizedBox(width: 4),
-                Text('Temperature $temperature  •  Max Tokens $maxTokens',
-                    style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                AnimatedRotation(
+                  turns: _expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(Icons.chevron_right_rounded, size: 14, color: colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(width: Spacing.xxs),
+                Text(
+                  'T: ${temperature.toStringAsFixed(1)}  ·  M: $maxTokens',
+                  style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                ),
               ],
             ),
           ),
         ),
-        if (_expanded)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.xxs, Spacing.md, Spacing.sm),
             child: Column(
               children: [
-                _buildSlider('Temperature', temperature, 0.0, 2.0, (v) {
-                  _debouncedUpdate(temperature: v);
-                }),
-                _buildSlider('Top-P', topP, 0.0, 1.0, (v) {
-                  _debouncedUpdate(topP: v);
-                }),
-                _buildSlider('Top-K', topK.toDouble(), 0, 100, (v) {
-                  _debouncedUpdate(topK: v.round());
-                }),
-                _buildSlider('Max Tokens', maxTokens.toDouble(), 256, 32768, (v) {
-                  _debouncedUpdate(maxTokens: v.round());
-                }),
-                _buildSlider('Repeat Penalty', repeatPenalty, 1.0, 2.0, (v) {
-                  _debouncedUpdate(repeatPenalty: v);
-                }),
+                _ParamSlider(
+                  label: 'Temperature',
+                  value: temperature,
+                  min: 0.0, max: 2.0,
+                  displayValue: temperature.toStringAsFixed(2),
+                  onChanged: (v) => _debouncedUpdate(temperature: v),
+                  colorScheme: colorScheme,
+                ),
+                _ParamSlider(
+                  label: 'Top-P',
+                  value: topP,
+                  min: 0.0, max: 1.0,
+                  displayValue: topP.toStringAsFixed(2),
+                  onChanged: (v) => _debouncedUpdate(topP: v),
+                  colorScheme: colorScheme,
+                ),
+                _ParamSlider(
+                  label: 'Top-K',
+                  value: topK.toDouble(),
+                  min: 0, max: 100,
+                  displayValue: topK.toString(),
+                  onChanged: (v) => _debouncedUpdate(topK: v.round()),
+                  colorScheme: colorScheme,
+                ),
+                _ParamSlider(
+                  label: 'Max Tokens',
+                  value: maxTokens.toDouble(),
+                  min: 256, max: 32768,
+                  displayValue: maxTokens.toString(),
+                  onChanged: (v) => _debouncedUpdate(maxTokens: v.round()),
+                  colorScheme: colorScheme,
+                ),
+                _ParamSlider(
+                  label: 'Repeat Penalty',
+                  value: repeatPenalty,
+                  min: 1.0, max: 2.0,
+                  displayValue: repeatPenalty.toStringAsFixed(2),
+                  onChanged: (v) => _debouncedUpdate(repeatPenalty: v),
+                  colorScheme: colorScheme,
+                ),
               ],
             ),
           ),
+          crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 200),
+        ),
       ],
     );
   }
+}
 
-  Widget _buildSlider(String label, double value, double min, double max, void Function(double) onChanged) {
+class _ParamSlider extends StatelessWidget {
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final String displayValue;
+  final ValueChanged<double> onChanged;
+  final ColorScheme colorScheme;
+
+  const _ParamSlider({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.displayValue,
+    required this.onChanged,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          SizedBox(width: 100, child: Text(label, style: const TextStyle(fontSize: 12))),
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+            ),
+          ),
           Expanded(
-            child: Slider(
-              value: value.clamp(min, max),
-              min: min,
-              max: max,
-              divisions: ((max - min) / 0.1).round().clamp(1, 1000),
-              label: value.toStringAsFixed(2),
-              onChanged: onChanged,
+            child: SliderTheme(
+              data: SliderThemeData(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                activeTrackColor: colorScheme.primary,
+                inactiveTrackColor: colorScheme.primary.withValues(alpha: 0.15),
+                thumbColor: colorScheme.primary,
+                overlayColor: colorScheme.primary.withValues(alpha: 0.08),
+              ),
+              child: Slider(
+                value: value.clamp(min, max),
+                min: min,
+                max: max,
+                divisions: ((max - min) / 0.1).round().clamp(1, 1000),
+                label: displayValue,
+                onChanged: onChanged,
+              ),
             ),
           ),
           SizedBox(
-            width: 50,
-            child: Text(value.toStringAsFixed(2), style: const TextStyle(fontSize: 11)),
+            width: 44,
+            child: Text(
+              displayValue,
+              style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+              textAlign: TextAlign.right,
+            ),
           ),
         ],
       ),

@@ -5,6 +5,7 @@ import '../database/database.dart';
 import '../providers/conversation_list_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/providers.dart';
+import '../core/theme/design_tokens.dart';
 
 class ConversationList extends ConsumerWidget {
   const ConversationList({super.key});
@@ -22,33 +23,55 @@ class ConversationList extends ConsumerWidget {
 
     return Column(
       children: [
+        // Header + New button
         Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: FilledButton.icon(
-            onPressed: () async {
-              final id = await ref.read(conversationListProvider.notifier).createConversation();
-              ref.read(chatProvider.notifier).loadConversation(id);
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('New Conversation'),
+          padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.sm, Spacing.md, Spacing.sm),
+          child: Row(
+            children: [
+              Text(
+                'Conversations',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurfaceVariant,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: IconButton(
+                  icon: Icon(Icons.add_rounded, size: LayoutTokens.iconSize),
+                  onPressed: () async {
+                    final id = await ref.read(conversationListProvider.notifier).createConversation();
+                    ref.read(chatProvider.notifier).loadConversation(id);
+                  },
+                  tooltip: 'New Conversation',
+                ),
+              ),
+            ],
           ),
         ),
-        const Divider(height: 1),
+        Divider(height: 1, thickness: LayoutTokens.dividerThickness, color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+
+        // Conversation list
         Expanded(
           child: ListView(
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(vertical: Spacing.xxs),
             children: grouped.entries.map((entry) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.md, Spacing.md, Spacing.xxs),
                     child: Text(
                       entry.key,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.8,
                       ),
                     ),
                   ),
@@ -123,14 +146,11 @@ class _ConversationTile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rename conversation'),
+        title: const Text('Rename'),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Title',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Title'),
           onSubmitted: (v) {
             if (v.trim().isNotEmpty) {
               onRename?.call(v.trim());
@@ -160,29 +180,64 @@ class _ConversationTile extends StatelessWidget {
     final date = DateTime.fromMillisecondsSinceEpoch(conversation.updatedAt);
     final timeStr = DateFormat('HH:mm').format(date);
 
-    return ListTile(
-      selected: isSelected,
-      selectedTileColor: colorScheme.secondaryContainer.withOpacity(0.3),
-      title: Text(
-        conversation.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Spacing.xs),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(RadiusTokens.sm),
+        onTap: onTap,
+        onLongPress: () => _showRenameDialog(context),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.sm, vertical: Spacing.sm),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? colorScheme.primary.withValues(alpha: 0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(RadiusTokens.sm),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      conversation.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        color: isSelected ? colorScheme.onSurface : colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      timeStr,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: Spacing.xs),
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, size: 16, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                  onPressed: onDelete,
+                  padding: EdgeInsets.zero,
+                  splashRadius: 12,
+                  tooltip: 'Delete',
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      subtitle: Text(
-        timeStr,
-        style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
-      ),
-      onTap: onTap,
-      onLongPress: () => _showRenameDialog(context),
-      trailing: IconButton(
-        icon: Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
-        onPressed: onDelete,
-      ),
-      dense: true,
     );
   }
 }
