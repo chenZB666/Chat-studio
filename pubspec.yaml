@@ -1,0 +1,51 @@
+name: llamachat
+description: Chat Studio - Cross-platform chat client for local LLMs
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+  go_router: ^14.2.7
+  dio: ^5.4.3+1
+  drift: ^2.16.0
+  sqlite3_flutter_libs: ^0.5.20
+  path_provider: ^2.1.3
+  path: ^1.9.0
+  uuid: ^4.4.0
+  intl: ^0.19.0
+  flex_color_scheme: ^8.1.0
+  flutter_markdown: ^0.7.1
+  flutter_highlight: ^0.7.0
+  highlight: ^0.7.0
+  flutter_math_fork: ^0.7.2
+  file_picker: ^10.0.0
+  # share_plus removed due to Kotlin compilation issues
+  collection: ^1.18.0
+  markdown: ^7.3.1
+  window_manager: ^0.5.1
+  system_tray: ^0.1.1
+  shared_preferences: ^2.5.5
+  flutter_secure_storage: ^10.3.1
+  syncfusion_flutter_pdf: ^33.2.15
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+  drift_dev: ^2.16.0
+  build_runner: ^2.4.9
+  riverpod_generator: ^2.4.0
+  json_serializable: ^6.8.0
+  json_annotation: ^4.9.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/
