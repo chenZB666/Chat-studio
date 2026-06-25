@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import '../models/model_info.dart';
 
@@ -12,7 +13,7 @@ class LlamaApiClient {
   LlamaApiClient()
       : _dio = Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 120),
           headers: {'Content-Type': 'application/json'},
         ));
 
@@ -72,7 +73,7 @@ class LlamaApiClient {
   }) async* {
     _cancelToken = CancelToken();
     try {
-      final response = await _dio.post(
+      final response = await _dio.post<ResponseBody>(
         '/v1/chat/completions',
         options: Options(responseType: ResponseType.stream),
         data: {
@@ -88,8 +89,11 @@ class LlamaApiClient {
         cancelToken: _cancelToken,
       );
 
-      final dataStream = response.data.stream as Stream<List<int>>;
-      final lineStream = dataStream.transform(_lineDecoder());
+      // Process SSE (Server-Sent Events) stream manually
+      final body = response.data;
+      if (body == null) return;
+      final lineStream = body.stream
+          .transform(_sseDecoder());
       await for (final chunk in lineStream) {
         if (chunk.startsWith('data: ')) {
           final jsonStr = chunk.substring(6);
@@ -127,13 +131,15 @@ class LlamaApiClient {
   }
 }
 
-/// Line decoder that converts a byte stream into individual lines.
-StreamTransformer<List<int>, String> _lineDecoder() {
-  return StreamTransformer<List<int>, String>.fromHandlers(
+/// SSE decoder: converts a byte stream into individual SSE message lines.
+///
+/// Combines UTF-8 decoding + line splitting into a single transformer,
+/// avoiding `Utf8Decoder` type compatibility issues in Dart 3.12+.
+StreamTransformer<Uint8List, String> _sseDecoder() {
+  return StreamTransformer<Uint8List, String>.fromHandlers(
     handleData: (data, sink) {
       final str = utf8.decode(data);
-      final lines = str.split('\n');
-      for (final line in lines) {
+      for (final line in str.split('\n')) {
         if (line.isNotEmpty) {
           sink.add(line);
         }
