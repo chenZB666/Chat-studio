@@ -133,13 +133,24 @@ class _ServerSettingsScreenState extends ConsumerState<ServerSettingsScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _saveServer,
-              icon: const Icon(Icons.save),
-              label: const Text('Save & Connect'),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _saveOnly,
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: const Text('Save'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _saveAndConnect,
+                  icon: const Icon(Icons.save),
+                  label: const Text('Save & Connect'),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           if (serverState.availableModels.isNotEmpty) ...[
@@ -198,7 +209,23 @@ class _ServerSettingsScreenState extends ConsumerState<ServerSettingsScreen> {
     setState(() => _testing = false);
   }
 
-  Future<void> _saveServer() async {
+  Future<void> _saveOnly() async {
+    final url = _urlController.text.trim();
+    if (url.isEmpty) return;
+
+    await ref.read(storageServiceProvider).saveServerConfig(
+      url: url,
+      apiKey: _apiKeyController.text.trim().isNotEmpty ? _apiKeyController.text.trim() : null,
+      label: _labelController.text.trim().isNotEmpty ? _labelController.text.trim() : null,
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Server saved'), duration: Duration(seconds: 2)),
+      );
+    }
+  }
+
+  Future<void> _saveAndConnect() async {
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
 
