@@ -36,6 +36,102 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     setState(() => _hasText = false);
   }
 
+  void _showModelSelector(BuildContext context, ServerState serverState, ColorScheme colorScheme) {
+    final searchController = TextEditingController();
+    String filter = '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final models = serverState.availableModels;
+            final filtered = filter.isEmpty
+                ? models
+                : models.where((m) =>
+                    m.id.toLowerCase().contains(filter.toLowerCase()) ||
+                    m.name.toLowerCase().contains(filter.toLowerCase())).toList();
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: TextField(
+                      controller: searchController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Search models...',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      onChanged: (v) => setSheetState(() => filter = v),
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.4,
+                    ),
+                    child: filtered.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text('No models match your search'),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: filtered.length,
+                            itemBuilder: (_, i) {
+                              final model = filtered[i];
+                              final isSelected = model.id == serverState.selectedModelId;
+                              return ListTile(
+                                selected: isSelected,
+                                leading: Icon(
+                                  Icons.smart_toy,
+                                  color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                                ),
+                                title: Text(model.name, style: const TextStyle(fontSize: 14)),
+                                subtitle: model.contextLength != null
+                                    ? Text('Context: ${model.contextLength} tokens', style: const TextStyle(fontSize: 11))
+                                    : null,
+                                trailing: isSelected
+                                    ? Icon(Icons.check, color: colorScheme.primary, size: 20)
+                                    : null,
+                                onTap: () {
+                                  ref.read(serverProvider.notifier).selectModel(model.id);
+                                  Navigator.pop(ctx);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
@@ -107,18 +203,21 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     border: Border.all(color: colorScheme.outlineVariant),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: serverState.selectedModelId,
-                      isDense: true,
-                      hint: const Text('Model', style: TextStyle(fontSize: 12)),
-                      style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
-                      items: serverState.availableModels.map((m) {
-                        return DropdownMenuItem(value: m.id, child: Text(m.name, style: const TextStyle(fontSize: 12)));
-                      }).toList(),
-                      onChanged: (v) {
-                        if (v != null) ref.read(serverProvider.notifier).selectModel(v);
-                      },
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _showModelSelector(context, serverState, colorScheme),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            serverState.selectedModelId?.split('/').last ?? 'Model',
+                            style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+                          ),
+                          Icon(Icons.arrow_drop_down, size: 18, color: colorScheme.onSurfaceVariant),
+                        ],
+                      ),
                     ),
                   ),
                 ),

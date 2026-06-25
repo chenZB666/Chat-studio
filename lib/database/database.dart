@@ -14,6 +14,17 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 1;
 
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async {
+      await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      // Future migrations go here:
+      // if (from < 2) { ... }
+    },
+  );
+
   // ── Conversations ──
 
   Future<List<Conversation>> getAllConversations() =>

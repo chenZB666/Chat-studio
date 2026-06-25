@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../database/database.dart';
 import '../providers/conversation_list_provider.dart';
 import '../providers/chat_provider.dart';
+import '../providers/providers.dart';
 
 class ConversationList extends ConsumerWidget {
   const ConversationList({super.key});
@@ -59,6 +60,7 @@ class ConversationList extends ConsumerWidget {
                       ref.read(chatProvider.notifier).loadConversation(conv.id);
                     },
                     onDelete: () => ref.read(conversationListProvider.notifier).deleteConversation(conv.id),
+                    onRename: (title) => ref.read(storageServiceProvider).updateConversationTitle(conv.id, title),
                   )),
                 ],
               );
@@ -106,13 +108,51 @@ class _ConversationTile extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final ValueChanged<String>? onRename;
 
   const _ConversationTile({
     required this.conversation,
     required this.isSelected,
     required this.onTap,
     required this.onDelete,
+    this.onRename,
   });
+
+  void _showRenameDialog(BuildContext context) {
+    final controller = TextEditingController(text: conversation.title);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rename conversation'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Title',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (v) {
+            if (v.trim().isNotEmpty) {
+              onRename?.call(v.trim());
+              Navigator.pop(ctx);
+            }
+          },
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                onRename?.call(controller.text.trim());
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +177,7 @@ class _ConversationTile extends StatelessWidget {
         style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
       ),
       onTap: onTap,
+      onLongPress: () => _showRenameDialog(context),
       trailing: IconButton(
         icon: Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
         onPressed: onDelete,
